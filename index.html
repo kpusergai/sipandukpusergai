@@ -1,59 +1,27 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplikasi SPD KPU Serdang Bedagai</title>
-  <!-- Menyerap file gaya visual css.html -->
-  <?!= include('css'); ?>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sistem Informasi Perjalanan Dinas Utama KPU Sergai</title>
+    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/16dWKIIu0v7FgnYx1nEC47Mb2Bz58i5ov">
+    <link rel="shortcut icon" type="image/png" href="https://lh3.googleusercontent.com/d/16dWKIIu0v7FgnYx1nEC47Mb2Bz58i5ov">
+    <style>
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #f4f6f9;
+        }
+        iframe {
+            border: none; width: 100%; height: 100%; display: block;
+        }
+    </style>
 </head>
 <body>
 
-  <!-- ==================================================================== -->
-  <!-- PANEL SCREEN 1: FORM LOGIN PETUGAS (MUNCUL PERTAMA KALI / JIKA LOGOUT) -->
-  <!-- ==================================================================== -->
-  <div id="kpuToast" class="kpu-toast"></div>
-  <!-- KOTAK MODAL KELUAR KUSTOM -->
-  <div id="kpuLogoutModal" class="kpu-modal-overlay">
-    <div class="kpu-modal-box">
-      <div style="font-size: 32px; margin-bottom: 10px;">🚪</div>
-      <div class="kpu-modal-title">Keluar dari Sistem?</div>
-      <div class="kpu-modal-text">Sesi kerja Anda akan diakhiri demi keamanan data KPU Kabupaten Serdang Bedagai.</div>
-      <div class="kpu-modal-buttons">
-        <button onclick="tutupModalLogout()" class="btn-modal-cancel">Batal</button>
-        <button onclick="eksekusiLogoutPetugas()" class="btn-modal-confirm">Ya, Keluar</button>
-      </div>
-    </div>
-  </div>
+    <!-- Atribut 'allow' di bawah ini adalah standar industri untuk meloloskan sensor GPS & Kamera dalam iframe -->
+    <iframe 
+        src="https://script.google.com/macros/s/AKfycbyTos7xpDzA2ADe6OlSfeIQVeXlgOROHK89MVYBf316G7DCLVAQUStd-Kbz4becbhEtrg/exec" 
+        
+    </iframe>
 
-  <div id="screenLogin" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #1e293b; display: flex; align-items: center; justify-content: center; z-index: 9999;">
-    <div style="background: white; padding: 32px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 360px; text-align: center;">
-      <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 6px; color: #0f172a;">Aplikasi SPD KPU</h2>
-      <p style="font-size: 11px; color: #64748b; margin-bottom: 20px;">Kabupaten Serdang Bedagai — Login Petugas</p>
-      
-      <form id="formLogin" onsubmit="handleLoginPetugas(event)">
-        <div style="text-align: left; margin-bottom: 12px;">
-          <label style="margin-bottom: 4px;">USERNAME PETUGAS</label>
-          <input type="text" id="login_username" required placeholder="Masukkan username...">
-        </div>
-        <div style="text-align: left; margin-bottom: 20px;">
-          <label style="margin-bottom: 4px;">PASSWORD</label>
-          <input type="password" id="login_password" required placeholder="Masukkan password...">
-        </div>
-        <button type="submit" id="btnLoginSubmit" class="btn-submit" style="width: 100%; padding: 10px; font-weight: bold;">Masuk Aplikasi</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ==================================================================== -->
-  <!-- PANEL SCREEN 2: AREA UTAMA DASHBOARD SISTEM (DIPERTAHANKAN LOCALSTORAGE) -->
-  <!-- ==================================================================== -->
-  <div id="screenAplikasiUtama" class="hidden">
-    <!-- Menyerap seluruh isi bodi form input, pratinjau tabel, dan modul cetak -->
-    <?!= include('halaman_konten'); ?>
-  </div>
-
-  <!-- Menyerap berkas mesin JavaScript utama dari file js.html -->
-  <?!= include('js'); ?>
 </body>
 </html>
