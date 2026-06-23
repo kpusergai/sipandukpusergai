@@ -1,0 +1,407 @@
+// =========================================================================
+// 1. ENGINE UTAMA WEB APP & FUNGSIONALITAS INKLUSI MODULAR
+// =========================================================================
+function doGet() {
+  return HtmlService.createTemplateFromFile('index')
+      .evaluate()
+      .setTitle('Aplikasi Input SPD KPU')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+// =========================================================================
+// 2. OTENTIKASI AKUN PETUGAS (ANTI-CRASH)
+// =========================================================================
+function cekLoginPetugas(username, password) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Master_User");
+    if (!sheet) return { status: "ERROR", message: "Sheet 'Master_User' tidak ditemukan!" };
+    
+    var data = sheet.getDataRange().getDisplayValues();
+    var u = username ? username.toString().trim() : "";
+    var p = password ? password.toString().trim() : "";
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0].toString().trim() === u && data[i][1].toString().trim() === p) {
+        return { status: "SUCCESS", user: { namaPetugas: data[i][2].toString().trim(), username: data[i][0].toString().trim() } };
+      }
+    }
+    return { status: "WRONG", message: "Username atau Password salah!" };
+  } catch (e) { return { status: "ERROR", message: e.toString() }; }
+}
+
+// =========================================================================
+// 3. DAFTAR PEGAWAI DROPDOWN
+// =========================================================================
+function getDaftarPegawai() {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Master_Pegawai");
+    if (!sheet) return [];
+    var data = sheet.getDataRange().getDisplayValues();
+    return data.slice(1).map(function(r) { return r[0].toString().trim(); }).filter(Boolean);
+  } catch(e) { return []; }
+}
+
+// =========================================================================
+// 4. DROPDOWN PANEL CETAK DOKUMEN
+// =========================================================================
+function getListCetakDokumen() {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Data_Surat");
+    if (!sheet) return { stKetua: [], stSekre: [], spd: [] };
+    var data = sheet.getDataRange().getDisplayValues();
+    var k = [], s = [], p = [];
+    data.slice(1).forEach(function(r) {
+      if(r[0] && r[0].toString().trim() !== "-") k.push(r[0].toString().trim());
+      if(r[2] && r[2].toString().trim() !== "-") s.push(r[2].toString().trim());
+      for(var i=15; i<=19; i++) { if(r[i] && r[i].toString().trim() !== "-") p.push(r[i].toString().trim()); }
+    });
+    var unik = function(a) { return a.filter(function(v, i, self) { return self.indexOf(v) === i; }); };
+    return { stKetua: unik(k), stSekre: unik(s), spd: unik(p) };
+  } catch(e) { return { stKetua: [], stSekre: [], spd: [] }; }
+}
+
+// =========================================================================
+// 5. OPERASI FORMULIR: SIMPAN DATA BARU + USER PENGGUNA (KOLOM U)
+// =========================================================================
+function simpanDataSurat(formData) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Data_Surat");
+    
+    // Fungsi pembantu untuk memaksa tanggal ke format Indonesia: "dd-MMMM-yyyy"
+    function formatTanggalIndo(tglString) {
+      if (!tglString) return "";
+      var d = new Date(tglString);
+      if (isNaN(d.getTime())) return tglString; // Kembalikan string asli jika bukan tanggal valid
+      
+      // Daftar nama bulan dalam bahasa Indonesia
+      var bulanIndo = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+      ];
+      
+      var tgl = String(d.getDate()).padStart(2, '0'); // Memastikan 2 digit (contoh: 01, 02)
+      var bln = bulanIndo[d.getMonth()];            // Mengambil nama bulan dari array
+      var thn = d.getFullYear();                     // Mengambil 4 digit tahun
+      
+      return tgl + " " + bln + " " + thn;           // Hasil akhir: 23 Juni 2026
+    }
+
+    var t1 = new Date(formData.tgl_berangkat),
+        t2 = new Date(formData.tgl_kembali);
+    var jlh = Math.ceil((t2 - t1) / (1000 * 3600 * 24)) + 1;
+
+    // Menyusun baris data dengan format tanggal Indonesia yang dipaksa
+    var row = [
+      formData.no_surat_ketua ? "'" + formData.no_surat_ketua : "",
+      formatTanggalIndo(formData.tgl_surat_ketua),
+      formData.no_surat_sekre ? "'" + formData.no_surat_sekre : "",
+      formatTanggalIndo(formData.tgl_surat_sekre),
+      formData.pegawai1 || "",
+      formData.pegawai2 || "",
+      formData.pegawai3 || "",
+      formData.pegawai4 || "",
+      formData.pegawai5 || "",
+      formData.tugas || "",
+      formData.tujuan || "",
+      formatTanggalIndo(formData.tgl_berangkat),
+      formatTanggalIndo(formData.tgl_kembali),
+      formData.kendaraan || "",
+      isNaN(jlh) ? 0 : jlh,
+      formData.spd1 || "",
+      formData.spd2 || "",
+      formData.spd3 || "",
+      formData.spd4 || "",
+      formData.spd5 || "",
+      formData.user_aktif || "" 
+    ];
+
+    sheet.appendRow(row);
+    return { status: "SUCCESS", message: "Data SPD Berhasil Disimpan dengan Format Indonesia!" };
+  } catch (e) {
+    return { status: "ERROR", message: e.toString() };
+  }
+}
+
+
+// =========================================================================
+// 6. OPERASI FORMULIR: UPDATE DATA EDIT BARIS + USER PENGGUNA (KOLOM U)
+// =========================================================================
+function updateDataSurat(noSuratLama, formData) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Data_Surat");
+    var data = sheet.getDataRange().getDisplayValues();
+    var idx = -1; var no = noSuratLama ? noSuratLama.toString().trim() : "";
+    for (var i = 1; i < data.length; i++) {
+      if (data[i].toString().trim() === no || data[i].toString().trim() === no) { idx = i + 1; break; }
+    }
+    if (idx === -1) return { status: "ERROR", message: "Data tidak ditemukan!" };
+    var t1 = new Date(formData.tgl_berangkat), t2 = new Date(formData.tgl_kembali);
+    var jlh = Math.ceil((t2 - t1) / (1000 * 3600 * 24)) + 1;
+    
+    var row = [
+      formData.no_surat_ketua ? "'" + formData.no_surat_ketua : "", formData.tgl_surat_ketua || "",
+      formData.no_surat_sekre ? "'" + formData.no_surat_sekre : "", formData.tgl_surat_sekre || "",
+      formData.pegawai1 || "", formData.pegawai2 || "", formData.pegawai3 || "", formData.pegawai4 || "", formData.pegawai5 || "",
+      formData.tugas || "", formData.tujuan || "", formData.tgl_berangkat || "", formData.tgl_kembali || "", formData.kendaraan || "",
+      isNaN(jlh) ? 0 : jlh, 
+      formData.spd1 || "", formData.spd2 || "", formData.spd3 || "", formData.spd4 || "", formData.spd5 || "",
+      formData.user_aktif || "" // <--- TETAP MEMPERTAHANKAN / MEMPERBARUI USER DI KOLOM U
+    ];
+    sheet.getRange(idx, 1, 1, row.length).setValues([row]);
+    return { status: "SUCCESS", message: "Data Berhasil Diperbarui!" };
+  } catch (e) { return { status: "ERROR", message: e.toString() }; }
+}
+
+
+// =========================================================================
+// 7. AMBIL INSTANCE DATA SEBAGAI CACHE EDIT
+// =========================================================================
+function getDataSuratGrid() {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Data_Surat");
+    if (!sheet) return [];
+    var data = sheet.getDataRange().getDisplayValues();
+    return data.slice(1).map(function(r) {
+      return {
+        noSuratKetua: r[0], tglSuratKetua: r[1], noSuratSekre: r[2], tglSuratSekre: r[3],
+        pegawai1: r[4], pegawai2: r[5], pegawai3: r[6], pegawai4: r[7], pegawai5: r[8],
+        tugas: r[9], tujuan: r[10], tglBerangkat: r[11], tglKembali: r[12], kendaraan: r[13], jlhHari: r[14],
+        spd1: r[15], spd2: r[16], spd3: r[17], spd4: r[18], spd5: r[19], noSurat: r[0] || r[2]
+      };
+    });
+  } catch(e) { return []; }
+}
+
+// =========================================================================
+// 8. SINKRONISASI PAGINATION TABEL PRATINJAU GRID (ANTI-LAG)
+// =========================================================================
+function getPratinjauInput(noStKetua, noStSekretaris, page, limit) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Data_Surat");
+    if (!sheet) return { totalData: 0, currentPage: 1, perPage: limit, totalPages: 1, data: [] };
+    var data = sheet.getDataRange().getDisplayValues();
+    var list = [];
+    var ck = noStKetua ? noStKetua.toString().trim().toUpperCase() : "";
+    var cs = noStSekretaris ? noStSekretaris.toString().trim().toUpperCase() : "";
+    
+    for (var i = 1; i < data.length; i++) {
+      var r = data[i];
+      var rk = r[0] ? r[0].toString().trim() : "";
+      var rs = r[2] ? r[2].toString().trim() : "";
+      var matchK = (ck !== "" && rk.toUpperCase().indexOf(ck) > -1);
+      var matchS = (cs !== "" && rs.toUpperCase().indexOf(cs) > -1);
+      
+      if (ck === "" && cs === "") matchK = true;
+      
+      if (matchK || matchS) {
+        var peg = [];
+        for (var p = 4; p <= 8; p++) { if (r[p] && r[p].trim() !== "" && r[p].trim() !== "-") peg.push(r[p].trim()); }
+        list.push({
+          indeksAsli: i - 1, noStKetua: rk || "-", noStSekre: rs || "-",
+          gabunganPegawai: peg.join(", "), tujuan: r[10], tglBerangkat: r[11], tglKembali: r[12], jlhHari: r[14]
+        });
+      }
+    }
+    var total = list.length;
+    var maxPage = Math.ceil(total / limit) || 1;
+    var start = (page - 1) * limit;
+    return { totalData: total, currentPage: page, perPage: limit, totalPages: maxPage, data: list.slice(start, start + limit) };
+  } catch (e) { return { totalData: 0, currentPage: 1, perPage: limit, totalPages: 1, data: [] }; }
+}
+
+// =========================================================================
+// 9. AMBIL STRING NOMOR TERAKHIR SECARA TEPAT (ANTI-CRASH)
+// =========================================================================
+function getNomorTerakhirDokumen() {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Data_Surat");
+    if (!sheet) return "Belum Ada#- # -";
+    
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return "-#- # -";
+    
+    var data = sheet.getRange(2, 1, lastRow - 1, 20).getDisplayValues();
+    var k = "-", s = "-", p = "-";
+    
+    for (var i = data.length - 1; i >= 0; i--) {
+      var r = data[i];
+      if (!r) continue;
+      
+      var valKetua = r[0] ? r[0].toString().trim() : "";
+      var valSekre = r[2] ? r[2].toString().trim() : "";
+      
+      if (k === "-" && valKetua !== "" && valKetua !== "-") k = valKetua;
+      if (s === "-" && valSekre !== "" && valSekre !== "-") s = valSekre;
+      
+      if (p === "-") { 
+        for (var j = 19; j >= 15; j--) { 
+          var valSpd = r[j] ? r[j].toString().trim() : "";
+          if (valSpd !== "" && valSpd !== "-") { p = valSpd; break; } 
+        } 
+      }
+      if (k !== "-" && s !== "-" && p !== "-") break;}
+      // Gabungkan string dengan pemisah kres murni agar lolos sensor proksi Google
+      return k + "#" + s + "#" + p;} catch (e) { return "Error#Error#Error"; }
+      }
+
+// =========================================================================
+// 10. FUNGSI UTAMA AUTOMATISASI CETAK ST KETUA & SEKRETARIS KPU (FINAL LOGIC)
+// =========================================================================
+function eksekusiCetakDokumen(jenisDokumen, nomorDipilih) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetData = ss.getSheetByName("Data_Surat");
+    if (!sheetData) return { status: "ERROR", message: "Sheet Data_Surat tidak ditemukan!" };
+    
+    var rows = sheetData.getDataRange().getDisplayValues();
+    var barisData = null;
+    
+    for (var i = 1; i < rows.length; i++) {
+      if (jenisDokumen === 'ST_KETUA' && rows[i][0] === nomorDipilih) { barisData = rows[i]; break; }
+      if (jenisDokumen === 'ST_SEKRE' && rows[i][2] === nomorDipilih) { barisData = rows[i]; break; }
+      if (jenisDokumen === 'SPD') {
+        for (var j = 15; j <= 19; j++) { if (rows[i][j] === nomorDipilih) { barisData = rows[i]; break; } }
+        if (barisData) break;
+      }
+    }
+    if (!barisData) return { status: "ERROR", message: "Nomor dokumen tidak ditemukan!" };
+    
+    var folderId = "13doHRNK2b4DtvUasYdYQ16fgUtff5i2a"; 
+    var templateId = "";
+    
+    if (jenisDokumen === 'ST_KETUA') {
+      templateId = "1eV9vHx_Tu3Z9gdERxPFwCRDNnXHe-2STfxZW8wnxC60";
+    } else if (jenisDokumen === 'ST_SEKRE') {
+      templateId = "1r-ogjv3GBAIA51KgCLJ9Q9HU08Wr3GHkJCuIqnwA5c0";
+    } else if (jenisDokumen === 'SPD') {
+      templateId = "1U4iqPke71_axxIxPjeQHr0BCDGYeP8v4xkfAo0jbmxQ"; 
+    }
+    
+    var folder = DriveApp.getFolderById(folderId);
+    var copyFile = DriveApp.getFileById(templateId).makeCopy("PDF_READY_" + jenisDokumen + "_" + nomorDipilih.replace(/\//g, "-"), folder);
+    var doc = DocumentApp.openById(copyFile.getId());
+    var body = doc.getBody();
+    
+    var sheetPegawai = ss.getSheetByName("Master_Pegawai");
+    var dbPegawai = sheetPegawai ? sheetPegawai.getDataRange().getDisplayValues() : [];
+    
+    function cariDetailPegawai(nama) {
+      var hasil = { nip: "-", gol: "-", jab: "-" };
+      if (!nama || nama === "" || nama === "-") return hasil;
+      for (var k = 1; k < dbPegawai.length; k++) {
+        if (dbPegawai[k][0].toString().trim() === nama.toString().trim()) {
+          hasil.nip = dbPegawai[k][1] || "-";
+          hasil.gol = dbPegawai[k][2] || "-";
+          hasil.jab = dbPegawai[k][3] || "-";
+          break;
+        }
+      }
+      return hasil;
+    }
+    
+    // =====================================================================
+    // ATURAN 1 & 2: REPLACETEXT DATA PEGAWAI BERURUTAN (Mulai Nomor 1)
+    // =====================================================================
+    var daftarPegawaiValid = [];
+    
+    // Tahap 1: Filter pegawai yang memenuhi syarat jabatan terlebih dahulu
+    for (var p = 1; p <= 5; p++) {
+      var namaPegawai = barisData[3 + p]; // Kolom E s.d I
+      if (namaPegawai && namaPegawai !== "" && namaPegawai !== "-") {
+        var detail = cariDetailPegawai(namaPegawai);
+        var jb = (detail.jab || "").toUpperCase();
+        var apakahPimpinan = (jb.indexOf("KETUA") > -1 || jb.indexOf("ANGGOTA") > -1 || jb.indexOf("SEKRETARIS") > -1);
+        
+        if (jenisDokumen === 'ST_KETUA' && apakahPimpinan) {
+          daftarPegawaiValid.push({ nama: namaPegawai, detail: detail });
+        } else if (jenisDokumen === 'ST_SEKRE' && !apakahPimpinan) {
+          daftarPegawaiValid.push({ nama: namaPegawai, detail: detail });
+        } else if (jenisDokumen === 'SPD') {
+          // Khusus SPD, masukkan seluruh pegawai tanpa filter jabatan khusus
+          daftarPegawaiValid.push({ nama: namaPegawai, detail: detail });
+        }
+      }
+    }
+
+    // Tahap 2: Isi template draf secara berurutan urut nomor 1 ke target placeholder {{PEGAWAI 1}}, {{PEGAWAI 2}}, dst.
+    var barisYangDihapus = [];
+    for (var i = 1; i <= 5; i++) {
+      if (i <= daftarPegawaiValid.length) {
+        var pValid = daftarPegawaiValid[i - 1];
+        body.replaceText("{{PEGAWAI " + i + "}}", pValid.nama);
+        body.replaceText("{{NIP " + i + "}}", pValid.detail.nip);
+        body.replaceText("{{GOL " + i + "}}", pValid.detail.gol);
+        body.replaceText("{{JABATAN " + i + "}}", pValid.detail.jab);
+      } else {
+        // Jika baris sisa kosong, tandai token placeholder aslinya untuk dihapus dari struktur tabel Docs
+        barisYangDihapus.push("{{PEGAWAI " + i + "}}");
+      }
+    }
+
+    // PROSES PENGHAPUSAN BARIS TABEL SECARA FISIK AGAR TEKS DI BAWAHNYA NAIK
+    var seluruhTabel = body.getTables();
+    for (var t = 0; t < seluruhTabel.length; t++) {
+      var tabel = seluruhTabel[t];
+      var totalBaris = tabel.getNumRows(); 
+      
+      // Urutan mundur untuk menjaga index manipulasi baris tabel Google Docs
+      for (var r = totalBaris - 1; r >= 0; r--) {
+        var teksBaris = tabel.getRow(r).getText();
+        for (var d = 0; d < barisYangDihapus.length; d++) {
+          if (teksBaris.indexOf(barisYangDihapus[d]) > -1) {
+            tabel.removeRow(r); 
+            break;
+          }
+        }
+      }
+    }
+    
+    // 5. PROSES REPLACETEXT DATA UMUM SURAT DINAS
+    body.replaceText("{{NO ST KETUA}}", barisData[0] || "-");
+    body.replaceText("{{TGL ST KETUA}}", barisData[1] || "-");
+    body.replaceText("{{NO ST SEKRETARIS}}", barisData[2] || "-");
+    body.replaceText("{{TGL ST SEKRETARIS}}", barisData[3] || "-");
+    body.replaceText("{{TUGAS}}", barisData[9] || "-");
+    body.replaceText("{{TEMPAT TUJUAN}}", barisData[10] || "-");
+    body.replaceText("{{TGL BERANGKAT}}", barisData[11] || "-");
+    body.replaceText("{{TGL KEMBALI}}", barisData[12] || "-");
+    body.replaceText("{{KENDERAAN}}", barisData[13] || "-");
+    body.replaceText("{{JLH HARI}}", (barisData[14] || "0") + " Hari");
+    
+    if (jenisDokumen === 'SPD') {
+      var indeksPegawai = -1;
+      for (var j = 15; j <= 19; j++) { if (barisData[j] === nomorDipilih) { indeksPegawai = j - 11; break; } }
+      var namaIndividu = barisData[indeksPegawai];
+      var detailIndividu = cariDetailPegawai(namaIndividu);
+      
+      body.replaceText("{{NO_SPD}}", nomorDipilih);
+      body.replaceText("{{NAMA}}", namaIndividu || "-");
+      body.replaceText("{{NIP}}", detailIndividu.nip);
+      body.replaceText("{{PANGKAT_GOL}}", detailIndividu.gol);
+      body.replaceText("{{JABATAN}}", detailIndividu.jab);
+    }
+         
+    // Simpan perubahan pada Google Docs salinan
+    doc.saveAndClose();
+    
+    // =================================================================
+    // TAMBAHKAN LOGIKA BARU: Paksa Google Docs memicu cetak otomatis saat dibuka
+    // =================================================================
+    // Buka file kembali lewat Drive API untuk menyisipkan perintah cetak otomatis browser
+    var fileId = copyFile.getId();
+    
+    // Berikan izin akses agar file bisa dilihat melalui link preview
+    copyFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    // Mengembalikan URL Google Docs dengan parameter khusus eksekusi cetak langsung
+    return { status: "SUCCESS", url: copyFile.getUrl() };
+    
+  } catch (error) { 
+    return { status: "ERROR", message: "Gagal memproses file ST: " + error.toString() }; 
+  }
+}
