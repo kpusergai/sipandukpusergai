@@ -1,0 +1,185 @@
+<!-- LAYER 1: HALAMAN FORM INPUT SURAT -->
+<main id="halamanInput">
+  <div class="container">
+    <div id="statusModeEdit" class="indicator-edit">MODE EDIT: Anda sedang mengubah data Surat Tugas.</div>
+    <h1 id="judulForm">Formulir Input Surat Tugas & SPD</h1>
+    
+    <form id="formSpd" onsubmit="handleFormSubmit(event)">
+      <input type="hidden" id="no_surat_lama" name="no_surat_lama" value="">
+
+      <div class="bg-box bg-ketua" style="position: relative;">
+        <span class="box-title" style="color: #10b981;">1. SURAT TUGAS KETUA KPU (Untuk Ketua/Anggota KPU)</span>
+        <span id="info_box_ketua" style="position: absolute; top: 14px; right: 14px; font-weight: bold; font-size: 11px; color: #047857; font-style: italic;">No Terakhir: Menunggu...</span>
+        <div class="grid-2">
+          <div><label>NO SURAT TUGAS (KETUA)</label><input type="text" id="no_surat_ketua" name="no_surat_ketua"></div>
+          <div><label>TGL SURAT TUGAS (KETUA)</label><input type="date" id="tgl_surat_ketua" name="tgl_surat_ketua"></div>
+        </div>
+      </div>
+
+      <div class="bg-box bg-sekre" style="position: relative;">
+        <span class="box-title" style="color: #3b82f6;">2. SURAT TUGAS SEKRETARIS KPU (Untuk Selain Ketua/Anggota)</span>
+        <span id="info_box_sekre" style="position: absolute; top: 14px; right: 14px; font-weight: bold; font-size: 11px; color: #1d4ed8; font-style: italic;">No Terakhir: Menunggu...</span>
+        <div class="grid-2">
+          <div><label>NO SURAT TUGAS (SEKRETARIS)</label><input type="text" id="no_surat_sekre" name="no_surat_sekre"></div>
+          <div><label>TGL SURAT TUGAS (SEKRETARIS)</label><input type="date" id="tgl_surat_sekre" name="tgl_surat_sekre"></div>
+        </div>
+      </div>
+
+      <div class="bg-box" style="position: relative;">
+        <span class="box-title">DAFTAR PEGAWAI TUGAS & NOMOR SPD</span>
+        <span id="info_box_spd" style="position: absolute; top: 14px; right: 14px; font-weight: bold; font-size: 11px; color: #d97706; font-style: italic;">No Terakhir: Menunggu...</span>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="row-pegawai">
+            <div><label>Pegawai 1 (Ketua Tim)</label><select name="pegawai1" id="pegawai1" required><option value="">-- Pilih Pegawai 1 --</option></select></div>
+            <div><label>Nomor SPD 1</label><input type="text" id="spd1" name="spd1" required></div>
+          </div>
+          <div class="row-pegawai">
+            <div><label>Pegawai 2</label><select name="pegawai2" id="pegawai2"><option value="">-- Pilih Pegawai 2 (Opsional) --</option></select></div>
+            <div><label>Nomor SPD 2</label><input type="text" id="spd2" name="spd2"></div>
+          </div>
+          <div class="row-pegawai">
+            <div><label>Pegawai 3</label><select name="pegawai3" id="pegawai3"><option value="">-- Pilih Pegawai 3 (Opsional) --</option></select></div>
+            <div><label>Nomor SPD 3</label><input type="text" id="spd3" name="spd3"></div>
+          </div>
+          <div class="row-pegawai">
+            <div><label>Pegawai 4</label><select name="pegawai4" id="pegawai4"><option value="">-- Pilih Pegawai 4 (Opsional) --</option></select></div>
+            <div><label>Nomor SPD 4</label><input type="text" id="spd4" name="spd4"></div>
+          </div>
+          <div class="row-pegawai">
+            <div><label>Pegawai 5</label><select name="pegawai5" id="pegawai5"><option value="">-- Pilih Pegawai 5 (Opsional) --</option></select></div>
+            <div><label>Nomor SPD 5</label><input type="text" id="spd5" name="spd5"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 12px;"><label>TUGAS / AGENDA</label><textarea id="tugas" name="tugas" rows="2" required></textarea></div>
+      <div style="margin-bottom: 12px;"><label>TEMPAT TUJUAN</label><input type="text" id="tujuan" name="tujuan" required></div>
+
+      <div class="grid-4">
+        <div><label>BERANGKAT</label><input type="date" id="tgl_berangkat" name="tgl_berangkat" required onchange="hitungHari()"></div>
+        <div><label>KEMBALI</label><input type="date" id="tgl_kembali" name="tgl_kembali" required onchange="hitungHari()"></div>
+        <div><label>JLH HARI</label><input type="text" id="jlh_hari" readonly style="font-weight:bold; text-align:center; color:#2563eb; background:#f3f4f6;" value="0"></div>
+        <div><label>KENDERAAN</label><select id="kendaraan" name="kendaraan" required><option value="Mobil Dinas">Mobil Dinas</option><option value="Pesawat Terbang">Pesawat Terbang</option><option value="Kereta Api">Kereta Api</option><option value="Angkutan Umum">Angkutan Umum</option></select></div>
+      </div>
+
+      <div class="flex-end">
+        <button type="button" id="btnBatalEdit" class="btn-reset btn-batal-edit hidden" onclick="batalkanModeEdit()">Batal Edit</button>
+        <button type="reset" id="btnResetForm" class="btn-reset">Reset</button>
+        <button type="submit" id="btnSubmit" class="btn-submit">Simpan Surat</button>
+      </div>
+    </form>
+  </div>
+</main>
+
+<!-- LAYER 2: GRID HALAMAN PRATINJAU INPUT -->
+<main id="halamanGrid" class="hidden">
+  <div class="container" style="max-width: 100%;">
+    <div class="table-header-flex">
+      <div>
+        <h1>Pratinjau Data Surat & SPD</h1>
+        <p style="font-size:11px; color:#6b7280; margin-top:-4px;">Menampilkan format isi seluruh nama pegawai sesuai No ST Ketua dan No ST Sekretaris.</p>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="filterStKetuaInput" placeholder="Cari No ST Ketua..." onkeyup="pemicuResetPaginationGrid()" style="width:160px; padding:6px; font-size:12px;">
+        <input type="text" id="filterStSekreInput" placeholder="Cari No ST Sekretaris..." onkeyup="pemicuResetPaginationGrid()" style="width:160px; padding:6px; font-size:12px;">
+      </div>
+    </div>
+    
+    <div class="table-area">
+      <table id="tabelDataSpd">
+        <thead>
+          <tr>
+            <th style="text-align:center; width:60px;">Aksi</th>
+            <th style="text-align:center; width:40px;">No</th>
+            <th>Nama Pegawai (Tim Personel)</th>
+            <th>No ST Ketua</th>
+            <th>No ST Sekretaris</th>
+            <th>Tujuan Dinas</th>
+            <th>Berangkat</th>
+            <th>Kembali</th>
+            <th style="text-align:center;">Durasi</th>
+          </tr>
+        </thead>
+        <tbody id="bodyTabelGrid">
+          <tr><td colspan="9" style="text-align:center; padding:20px; color:#9ca3af;">Memuat data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="grid-pagination-controls" style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; background: #ffffff; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb;">
+      <div id="grid-limit-container" style="display: none; align-items: center; gap: 6px;">
+        <span style="font-weight: bold; color: #4b5563;">Tampilkan baris:</span>
+        <select id="grid-per-page-select" onchange="ubahLimitGrid(this.value)" style="width: auto; padding: 3px 8px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 4px;">
+          <option value="10">10 Baris</option>
+          <option value="20">20 Baris</option>
+          <option value="30">30 Baris</option>
+        </select>
+      </div>
+      <div id="grid-limit-placeholder" style="color: #9ca3af; font-style: italic;">Standar tampilan halaman pertama (Maksimal 10 Baris).</div>
+
+      <div id="grid-nav-buttons-container" style="display: none; align-items: center; gap: 4px;">
+        <button type="button" id="grid-btn-back" class="btn-reset" onclick="navigasiGrid('back')" style="padding: 4px 10px; font-size: 11px; font-weight: bold;">Back</button>
+        <span id="grid-page-info" style="font-weight: bold; color: #374151; padding: 0 8px;">Halaman 1 dari 1</span>
+        <button type="button" id="grid-btn-next" class="btn-reset" onclick="navigasiGrid('next')" style="padding: 4px 10px; font-size: 11px; font-weight: bold;">Next</button>
+        <button type="button" id="grid-btn-last" class="btn-reset" onclick="navigasiGrid('last')" style="padding: 4px 10px; font-size: 11px; font-weight: bold; background: #e5e7eb;">Last Page</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- LAYER 3: PANEL MODUL CETAK -->
+<main id="halamanCetak" class="hidden">
+  <div class="container">
+    <h1>Modul Cetak Dokumen Dinas (PDF)</h1>
+    <p style="font-size:12px; color:#64748b; margin-top:-10px; margin-bottom:20px;">Silakan pilih nomor dokumen untuk mencetak draf PDF otomatis.</p>
+    
+    <div class="bg-box bg-ketua" style="margin-bottom: 16px;">
+      <span class="box-title" style="color: #10b981;">1. CETAK SURAT TUGAS KETUA KPU</span>
+      <div style="margin-top:8px; display:flex; gap:12px; align-items:flex-end;">
+        <div style="flex:1;">
+          <label>NOMOR ST KETUA</label>
+          <select id="selectCetakStKetua"><option value="">-- Memuat... --</option></select>
+        </div>
+        <button type="button" class="btn-submit" id="btnCetakStKetua" onclick="unduhDokumenPdf('ST_KETUA')" style="background:#10b981;">Cetak ST Ketua</button>
+      </div>
+    </div>
+
+    <div class="bg-box bg-sekre" style="margin-bottom: 16px;">
+      <span class="box-title" style="color: #3b82f6;">2. CETAK SURAT TUGAS SEKRETARIS KPU</span>
+      <div style="margin-top:8px; display:flex; gap:12px; align-items:flex-end;">
+        <div style="flex:1;">
+          <label>NOMOR ST SEKRETARIS</label>
+          <select id="selectCetakStSekre"><option value="">-- Memuat... --</option></select>
+        </div>
+        <button type="button" class="btn-submit" id="btnCetakStSekre" onclick="unduhDokumenPdf('ST_SEKRE')" style="background:#3b82f6;">Cetak ST Sekretaris</button>
+      </div>
+    </div>
+
+    <div class="bg-box" style="border-left: 4px solid #f59e0b; margin-bottom: 16px;">
+      <span class="box-title" style="color: #d97706;">3. CETAK LEMBAR SPD PEGAWAI</span>
+      <div style="margin-top:8px; display:flex; gap:12px; align-items:flex-end;">
+        <div style="flex:1;">
+          <label>NOMOR SPD INDIVIDU</label>
+          <select id="selectCetakSpd"><option value="">-- Memuat... --</option></select>
+        </div>
+        <button type="button" class="btn-submit" id="btnCetakSpd" onclick="unduhDokumenPdf('SPD')" style="background:#f59e0b;">Cetak Lembar SPD</button>
+      </div>
+    </div>
+
+    <div id="loadingCetak" style="margin-top:12px; font-size:12px; color:#1e293b; font-weight:bold; text-align:center; display:none; background:#f1f5f9; padding:8px; border-radius:4px; border:1px dashed #cbd5e1;">
+      🔄 Sedang memproses dokumen di Drive... Tab baru PDF akan terbuka otomatis dalam 3-5 detik.
+    </div>
+  </div>
+</main>
+
+<!-- LAYER 4: NAVIGATION BAR SIDEBAR FIXED -->
+<aside>
+  <div class="aside-header"><div class="aside-title">NAVIGASI SPD</div></div>
+  <nav class="aside-nav">
+    <button onclick="bukaHalaman('input')" id="menu-input" class="nav-btn nav-active">📝 Input Surat</button>
+    <button onclick="bukaHalaman('grid')" id="menu-grid" class="nav-btn">📊 Pratinjau Input</button>
+    <button onclick="bukaHalaman('cetak')" id="menu-cetak" class="nav-btn">🖨️ Cetak Surat</button>
+    <button onclick="aktifkanLogoutPetugas()" style="width: 100%; text-align: left; padding: 10px 14px; background: #ef4444; border: none; color: white; font-size: 13px; font-weight: bold; border-radius: 6px; margin-top: 20px;">🚪 Keluar Aplikasi</button>
+  </nav>
+  <div class="aside-footer">v1.0 &copy; 2026 KPU</div>
+</aside>
